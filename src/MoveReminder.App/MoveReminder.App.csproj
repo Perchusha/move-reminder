@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The tray app (ADR-0003). The target is the one the A-1 spike prototype used (docs/spikes/toast-buttons.md). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>MoveReminder.App</RootNamespace>
+    <AssemblyName>MoveReminder</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <NeutralLanguage>ru</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoveReminder.Core\MoveReminder.Core.csproj" />
+  </ItemGroup>
+
+</Project>

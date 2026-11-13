@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# Proves that the gate and the build guards fail when they should (E0-AC1, E0-AC6).
+#
+#   bash scripts/gate-selftest
+#
+# scripts/gate --full runs it. It copies the working tree into a scratch git
+# repository, breaks one rule there at a time, and expects the build or the gate
+# to fail with the error that rule names:
+#   - Core uses DateTime.Now, DateTime.UtcNow, DateTimeOffset.Now,
+#     Environment.GetFolderPath, HttpClient or a socket type: RS0030 on each line;
+#   - App uses HttpClient or a socket type: RS0030 on each line;
+#   - Core uses a WinForms type: the type does not exist for net10.0;
+#   - Core turns WinForms on in its project file: NETSDK1136;
+#   - Core references App: MSBuild reports the circular reference;
+#   - a file is badly formatted: scripts/gate --fast fails on the format check;
+#   - a unit test fails: scripts/gate --fast exits non-zero.
+# The working tree itself is never changed. Exit 0 when every rule bites.
+set -euo pipefail
+
+if ! top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  echo "selftest: FAIL - not inside a git repository."
+  exit 1
+fi
+cd "$top"
+
+export DOTNET_NOLOGO=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+
+# The tree as the gate sees it: tracked and new files, without ignored build output.
+git -c core.quotePath=false ls-files -z --cached --others --exclude-standard \
+  | tar --null --ignore-failed-read -T - -cf - 2>/dev/null \
+  | tar -xf - -C "$scratch"
+cd "$scratch"
+git init -q
+git config core.autocrlf false
+git config core.hooksPath /dev/null
+
+failures=0
+log="$scratch/.selftest.log"
+
+fail() {
+  echo "selftest: FAIL - $1"
+  failures=$((failures + 1))
+}
+
+# Builds a project that must not build, and checks that the log names each expected error.
+# Usage: expect_build_failure <label> <project> <pattern>...
+expect_build_failure() {
+  local label="$1" project="$2"
+  shift 2
+  if dotnet build "$project" -c Release --nologo -v q >"$log" 2>&1; then
+    fail "$label: the build passed, but it must fail"
+    return
+  fi
+  local pattern
+  for pattern in "$@"; do
+    if ! grep -E -q -- "$pattern" "$log"; then
+      fail "$label: the build failed, but not with /$pattern/"
+      tail -n 15 "$log"
+      return
+    fi
+  done
+  echo "selftest: ok - $label"
+}
+
+core_violations="src/MoveReminder.Core/SelfTestViolations.cs"
+app_violations="src/MoveReminder.App/SelfTestViolations.cs"
+winforms_in_core="src/MoveReminder.Core/SelfTestWinForms.cs"
+core_project="src/MoveReminder.Core/MoveReminder.Core.csproj"
+app_project="src/MoveReminder.App/MoveReminder.App.csproj"
+
+# 1. Banned APIs in Core: one per line, so each line must carry its own RS0030.
+cat >"$core_violations" <<'EOF'
+namespace MoveReminder.Core;
+
+internal static class SelfTestViolations
+{
+    internal static object[] All() =>
+    [
+        DateTime.Now,
+        DateTime.UtcNow,
+        DateTimeOffset.Now,
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        new System.Net.Http.HttpClient(),
+        new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp),
+    ];
+}
+EOF
+expect_build_failure "Core bans DateTime.Now, DateTime.UtcNow, DateTimeOffset.Now, Environment.GetFolderPath, HttpClient, Socket" \
+  "$core_project" \
+  'SelfTestViolations\.cs\(7,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(8,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(9,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(10,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(11,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(12,[0-9]+\): error RS0030'
+rm -f "$core_violations"
+
+# 2. Network types in App.
+cat >"$app_violations" <<'EOF'
+namespace MoveReminder.App;
+
+internal static class SelfTestViolations
+{
+    internal static object[] All() =>
+    [
+        new System.Net.Http.HttpClient(),
+        new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp),
+    ];
+}
+EOF
+expect_build_failure "App bans HttpClient and Socket" \
+  "$app_project" \
+  'SelfTestViolations\.cs\(7,[0-9]+\): error RS0030' \
+  'SelfTestViolations\.cs\(8,[0-9]+\): error RS0030'
+rm -f "$app_violations"
+
+# 3. A WinForms type in Core's code.
+cat >"$winforms_in_core" <<'EOF'
+namespace MoveReminder.Core;
+
+internal static class SelfTestWinForms
+{
+    internal static Type Form => typeof(System.Windows.Forms.Form);
+}
+EOF
+expect_build_failure "Core cannot see WinForms types" \
+  "$core_project" \
+  'SelfTestWinForms\.cs\([0-9]+,[0-9]+\): error CS0234'
+rm -f "$winforms_in_core"
+
+# 4. WinForms turned on in Core's project file.
+cp "$core_project" "$scratch/.core.csproj"
+sed -i 's|<TargetFramework>net10.0</TargetFramework>|&<UseWindowsForms>true</UseWindowsForms>|' "$core_project"
+expect_build_failure "Core cannot turn WinForms on" "$core_project" 'error NETSDK1136'
+cp "$scratch/.core.csproj" "$core_project"
+
+# 5. Core references App.
+sed -i 's|</Project>|  <ItemGroup><ProjectReference Include="../MoveReminder.App/MoveReminder.App.csproj" /></ItemGroup>\n</Project>|' "$core_project"
+expect_build_failure "Core cannot reference App" "$core_project" 'error MSB4006: There is a circular dependency'
+cp "$scratch/.core.csproj" "$core_project"
+rm -f "$scratch/.core.csproj"
+
+# 6. A file that dotnet format would change makes scripts/gate --fast fail.
+printf 'namespace MoveReminder.Core;\n\ninternal static class SelfTestFormat\n{\n        internal const int Indented = 8;\n}\n' >"src/MoveReminder.Core/SelfTestFormat.cs"
+if bash scripts/gate --fast >"$log" 2>&1; then
+  fail "a badly formatted file: scripts/gate --fast passed, but it must fail"
+elif ! grep -q 'gate: FAIL (--fast) - format (whitespace)' "$log"; then
+  fail "a badly formatted file: scripts/gate --fast failed, but not on the format check"
+  tail -n 15 "$log"
+else
+  echo "selftest: ok - a badly formatted file fails scripts/gate --fast"
+fi
+rm -f "src/MoveReminder.Core/SelfTestFormat.cs"
+
+# 7. A failing unit test makes scripts/gate --fast fail.
+cat >"tests/MoveReminder.Core.Tests/SelfTestFailingTest.cs" <<'EOF'
+namespace MoveReminder.Core.Tests;
+
+public sealed class SelfTestFailingTest
+{
+    [Fact]
+    public void FailsOnPurpose() => Assert.Fail("The gate self-test planted this failing test.");
+}
+EOF
+if bash scripts/gate --fast >"$log" 2>&1; then
+  fail "a failing unit test: scripts/gate --fast passed, but it must fail"
+elif ! grep -q 'FailsOnPurpose' "$log" || ! grep -q 'gate: FAIL (--fast) - tests' "$log"; then
+  fail "a failing unit test: scripts/gate --fast failed, but not on the planted test"
+  tail -n 15 "$log"
+else
+  echo "selftest: ok - a failing unit test fails scripts/gate --fast"
+fi
+
+if [ "$failures" -gt 0 ]; then
+  echo "selftest: FAIL - $failures guard(s) did not bite."
+  exit 1
+fi
+echo "selftest: PASS"

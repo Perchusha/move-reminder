@@ -1,0 +1,20 @@
+<Project>
+  <!-- Settings every project of the solution shares (docs/STACK.md, Lint and format). -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <!-- The build runs IDE0005 (unnecessary usings) only with a documentation file; missing doc comments are not an error. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <SatelliteResourceLanguages>ru</SatelliteResourceLanguages>
+    <Company>move-reminder</Company>
+    <Product>move-reminder</Product>
+    <Copyright>Copyright (c) 2026 Anton Perch</Copyright>
+  </PropertyGroup>
+</Project>

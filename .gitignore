@@ -19,3 +19,11 @@ coverage/
 
 # Claude Code settings that stay on this machine
 .claude/settings.local.json
+
+# .NET build output and the release build (scripts/build)
+bin/
+obj/
+artifacts/
+*.user
+.vs/
+TestResults/
