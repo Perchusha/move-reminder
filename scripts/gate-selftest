@@ -9,6 +9,7 @@
 #   - Core uses DateTime.Now, DateTime.UtcNow, DateTimeOffset.Now,
 #     Environment.GetFolderPath, HttpClient or a socket type: RS0030 on each line;
 #   - App uses HttpClient or a socket type: RS0030 on each line;
+#   - App uses a SystemIcons value instead of its own icon: RS0030;
 #   - Core uses a WinForms type: the type does not exist for net10.0;
 #   - Core turns WinForms on in its project file: NETSDK1136;
 #   - Core references App: MSBuild reports the circular reference;
@@ -117,6 +118,20 @@ expect_build_failure "App bans HttpClient and Socket" \
   "$app_project" \
   'SelfTestViolations\.cs\(7,[0-9]+\): error RS0030' \
   'SelfTestViolations\.cs\(8,[0-9]+\): error RS0030'
+rm -f "$app_violations"
+
+# 2b. A system icon in App, where the tray must show the app's own icon (QA-E0-1).
+cat >"$app_violations" <<'EOF'
+namespace MoveReminder.App;
+
+internal static class SelfTestViolations
+{
+    internal static Icon Tray => SystemIcons.Application;
+}
+EOF
+expect_build_failure "App bans SystemIcons" \
+  "$app_project" \
+  'SelfTestViolations\.cs\(5,[0-9]+\): error RS0030'
 rm -f "$app_violations"
 
 # 3. A WinForms type in Core's code.

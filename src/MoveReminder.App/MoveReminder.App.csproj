@@ -9,10 +9,19 @@
     <AssemblyName>MoveReminder</AssemblyName>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <NeutralLanguage>ru</NeutralLanguage>
+    <!-- The app's own icon (scripts/make-icon.ps1 draws it): on MoveReminder.exe, so on the Start menu shortcut too. -->
+    <ApplicationIcon>Resources\move-reminder.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MoveReminder.Core\MoveReminder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The same icon for the tray, which loads it at the size the tray asks for (AppIcon). -->
+    <EmbeddedResource Include="Resources\move-reminder.ico" LogicalName="MoveReminder.App.Resources.move-reminder.ico" />
+    <!-- The tray shows the app's own icon, never a SystemIcons value (QA-E0-1). -->
+    <AdditionalFiles Include="BannedSymbols.txt" />
   </ItemGroup>
 
 </Project>

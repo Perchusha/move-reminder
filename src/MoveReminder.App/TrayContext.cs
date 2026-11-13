@@ -7,6 +7,7 @@ namespace MoveReminder.App;
 internal sealed class TrayContext : ApplicationContext
 {
     private readonly ContextMenuStrip _menu;
+    private readonly Icon _icon;
     private readonly NotifyIcon _tray;
 
     public TrayContext()
@@ -14,9 +15,10 @@ internal sealed class TrayContext : ApplicationContext
         _menu = new ContextMenuStrip();
         _menu.Items.Add(Strings.Exit, null, (_, _) => Exit());
 
+        _icon = AppIcon.ForTray();
         _tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _icon,
             Text = Product.Name,
             ContextMenuStrip = _menu,
             Visible = true,
@@ -34,6 +36,7 @@ internal sealed class TrayContext : ApplicationContext
         if (disposing)
         {
             _tray.Dispose();
+            _icon.Dispose();
             _menu.Dispose();
         }
         base.Dispose(disposing);

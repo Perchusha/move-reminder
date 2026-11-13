@@ -22,4 +22,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The app's icon as a file, so AppIconFileTests can read its frames; a copy, not a reference to App. -->
+    <None Include="..\..\src\MoveReminder.App\Resources\move-reminder.ico" Link="move-reminder.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
