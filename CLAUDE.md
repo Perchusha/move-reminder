@@ -1,6 +1,6 @@
 # move-reminder
 
-Десктопное приложение для Windows и macOS, которое раз в час напоминает встать и подвигаться, а ещё поесть, потренироваться и позаниматься теорией на права
+Десктопное приложение для Windows, которое раз в час напоминает встать и подвигаться, а ещё поесть, потренироваться и позаниматься теорией на права
 
 The full spec is `docs/SPEC.md`. Read the sections your task touches before planning. `docs/INDEX.md` lists every document and when to read it.
 
