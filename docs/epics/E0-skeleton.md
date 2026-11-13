@@ -15,6 +15,7 @@ ADR: ADR-0002, ADR-0003
 - [ ] E0-AC6: The solution holds `src/MoveReminder.Core` (`net10.0`), `src/MoveReminder.App` (`net10.0-windows10.0.19041.0`, the target the spike prototype used) and `tests/MoveReminder.Core.Tests`, with a repository `nuget.config` that names nuget.org; a reference to WinForms from Core, or `DateTime.Now`, `HttpClient` or a socket type in either project, fails the build (CLAUDE.md, Architecture boundaries).
 - [ ] E0-AC7: The installer installs without a UAC prompt into the fixed folder `%LOCALAPPDATA%\Programs\move-reminder`, offers no choice of folder, and adds a Start menu shortcut; its uninstaller deletes only the files the installer put there and the shortcut, and leaves `%APPDATA%\move-reminder` in place.
 - [ ] E0-AC8: The installed "hello world" app, left in the tray for an hour, uses at most 50 MB of private working set (the Memory column of Task Manager) and about 0% CPU; the measured numbers are recorded in `docs/JOURNAL.md` as the baseline for A-4.
+- [ ] E0-AC9: The repository has a `LICENSE` file with the MIT licence (docs/DISCOVERY.md, Licence), and the installer puts it and a `THIRD-PARTY-NOTICES.txt` with the licences of the shipped assemblies (.NET and Windows Forms, WinRT.Runtime.dll, Microsoft.Windows.SDK.NET.dll; docs/SPEC.md, Dependency licences) into the install folder.
 
 ## Out of scope
 

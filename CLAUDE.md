@@ -26,6 +26,7 @@ From `docs/STACK.md` (Folder structure and module boundaries) and ADR-0003. Ever
 - `src/MoveReminder.App` (tray, settings window, notifications, OS events, autostart) references Core. Core never references App. Enforced by MSBuild project references: a reference back from Core would make a cycle and the build fails.
 - Core reads time only through `TimeProvider`, never `DateTime.Now`, `DateTime.UtcNow` or `DateTimeOffset.Now`. Enforced by BannedApiAnalyzers (`BannedSymbols.txt`), with warnings as errors.
 - The app never goes to the network (docs/DISCOVERY.md: Personal data): `System.Net.Http` and `System.Net.Sockets` types are banned in both projects. Enforced by BannedApiAnalyzers.
+- Core never looks up `%APPDATA%` itself: it takes the settings folder as a parameter from App, and the tests pass a temporary folder, so they never touch the owner's real settings. Enforced by BannedApiAnalyzers, which bans `System.Environment.GetFolderPath` in Core.
 - Tests of Core run without Windows UI on `FakeTimeProvider`. Enforced by `tests/MoveReminder.Core.Tests` referencing Core only, never App.
 
 ## Definition of done
