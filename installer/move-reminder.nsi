@@ -7,6 +7,8 @@
 ;                 scripts/build writes from the publish folder, one line per file
 ;   LICENSE_FILE  the project's LICENSE
 ;   NOTICES_FILE  THIRD-PARTY-NOTICES.txt, with the .NET runtime's notices appended
+;   ICON_FILE     the app's icon, src/MoveReminder.App/Resources/move-reminder.ico,
+;                 for the installer, the uninstaller and the Start menu shortcut
 ;
 ; It installs without administrator rights (no UAC prompt) into the fixed folder
 ; %LOCALAPPDATA%\Programs\move-reminder and offers no choice of folder. The
@@ -14,8 +16,8 @@
 ; menu shortcut; anything else in the folder, and %APPDATA%\move-reminder with the
 ; settings (ADR-0001), stays.
 
-!ifndef VERSION | OUT_FILE | FILES_DIR | LICENSE_FILE | NOTICES_FILE
-  !error "Build the installer with scripts/build, which passes VERSION, OUT_FILE, FILES_DIR, LICENSE_FILE and NOTICES_FILE."
+!ifndef VERSION | OUT_FILE | FILES_DIR | LICENSE_FILE | NOTICES_FILE | ICON_FILE
+  !error "Build the installer with scripts/build, which passes VERSION, OUT_FILE, FILES_DIR, LICENSE_FILE, NOTICES_FILE and ICON_FILE."
 !endif
 
 !define PRODUCT "move-reminder"
@@ -30,6 +32,9 @@ SetCompressor zlib
 RequestExecutionLevel user
 Name "${PRODUCT}"
 OutFile "${OUT_FILE}"
+; The app's own icon, the one MoveReminder.exe carries, not the NSIS default.
+Icon "${ICON_FILE}"
+UninstallIcon "${ICON_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\${PRODUCT}"
 ShowInstDetails show
 ShowUninstDetails show
@@ -61,7 +66,8 @@ Section "Install"
   File "/oname=LICENSE.txt" "${LICENSE_FILE}"
   File "/oname=THIRD-PARTY-NOTICES.txt" "${NOTICES_FILE}"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  CreateShortcut "${SHORTCUT}" "$INSTDIR\${EXE}"
+  ; The shortcut's icon is the one MoveReminder.exe carries, the app's own.
+  CreateShortcut "${SHORTCUT}" "$INSTDIR\${EXE}" "" "$INSTDIR\${EXE}" 0
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "Anton Perch"

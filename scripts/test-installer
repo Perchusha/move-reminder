@@ -9,6 +9,9 @@
 #   - it installs into %LOCALAPPDATA%\Programs\move-reminder even when /D= names
 #     another folder, with LICENSE.txt and THIRD-PARTY-NOTICES.txt, and adds the Start
 #     menu shortcut and the HKCU uninstall entry;
+#   - the installer, MoveReminder.exe and Uninstall.exe carry the app's own icon,
+#     src/MoveReminder.App/Resources/move-reminder.ico, and the shortcut takes its
+#     icon from MoveReminder.exe (QA-E0-1);
 #   - the uninstaller removes the installed files, the shortcut and the entry, and
 #     leaves a file it did not install and %APPDATA%\move-reminder in place.
 # Outside CI it refuses to run when move-reminder is already installed, so it never
@@ -48,6 +51,36 @@ no_key() { ! has_key; }
 missing() { [ ! -e "$1" ]; }
 dir_empty() { [ -z "$(ls -A "$1" 2>/dev/null)" ]; }
 
+# The app's own icon (QA-E0-1). A file shows it when the icon Windows takes from the
+# file (Icon.ExtractAssociatedIcon, at the system's large icon size) has the very
+# pixels of the frame of that size in the repository's .ico.
+app_icon="$(cd "$(dirname "$0")/.." && pwd)/src/MoveReminder.App/Resources/move-reminder.ico"
+shows_app_icon() {
+  ICON_REF="$(cygpath -w "$app_icon")" ICON_OF="$(cygpath -w "$1")" powershell.exe -NoProfile -NonInteractive -Command '
+    $ErrorActionPreference = "Stop"
+    Add-Type -AssemblyName System.Drawing
+    function Pixels($icon) {
+      $b = $icon.ToBitmap(); $s = New-Object System.Text.StringBuilder
+      for ($y = 0; $y -lt $b.Height; $y++) { for ($x = 0; $x -lt $b.Width; $x++) { [void]$s.Append($b.GetPixel($x, $y).ToArgb()).Append(",") } }
+      $s.ToString()
+    }
+    $of = [System.Drawing.Icon]::ExtractAssociatedIcon($env:ICON_OF)
+    $ref = New-Object System.Drawing.Icon($env:ICON_REF, $of.Width, $of.Height)
+    if ($ref.Width -eq $of.Width -and (Pixels $ref) -eq (Pixels $of)) { exit 0 } else { exit 1 }
+  ' >/dev/null 2>&1
+}
+not_app_icon() { ! shows_app_icon "$1"; }
+# The icon the shortcut names, as "<file>,<index>", in lower case.
+shortcut_icon() {
+  LNK="$(cygpath -w "$1")" powershell.exe -NoProfile -NonInteractive -Command \
+    '(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK).IconLocation' | tr -d '\r' | tr '[:upper:]' '[:lower:]'
+}
+shortcut_shows_exe_icon() {
+  local want
+  want="$(cygpath -w "$inst/MoveReminder.exe" | tr '[:upper:]' '[:lower:]'),0"
+  [ "$(shortcut_icon "$shortcut")" = "$want" ]
+}
+
 if [ -z "${CI:-}" ] && { [ -e "$inst" ] || has_key; }; then
   echo "test-installer: FAIL - move-reminder is already installed here ($inst); uninstall it first, this test never touches a real installation." >&2
   exit 1
@@ -76,6 +109,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+check "the icon check tells icons apart: cmd.exe does not show the app's icon" \
+  not_app_icon "$(cygpath -u "$SYSTEMROOT")/System32/cmd.exe"
+check "the installer carries the app's icon" shows_app_icon "$installer"
 check "the installer asks for no elevation (asInvoker)" \
   grep -a -q 'requestedExecutionLevel level="asInvoker"' "$installer"
 
@@ -91,6 +127,9 @@ for name in 'WinRT.Runtime.dll' 'Microsoft.Windows.SDK.NET.dll' 'NSIS' '.NET run
 done
 check "the Uninstall.exe is in the install folder" test -f "$inst/Uninstall.exe"
 check "the Start menu shortcut is there" test -f "$shortcut"
+check "MoveReminder.exe carries the app's icon" shows_app_icon "$inst/MoveReminder.exe"
+check "Uninstall.exe carries the app's icon" shows_app_icon "$inst/Uninstall.exe"
+check "the Start menu shortcut takes its icon from MoveReminder.exe" shortcut_shows_exe_icon
 check "the HKCU uninstall entry is there" has_key
 check "/D= does not move the install folder" dir_empty "$decoy"
 

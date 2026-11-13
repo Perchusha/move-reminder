@@ -8,7 +8,8 @@
 #   2. THIRD-PARTY-NOTICES.txt: installer/THIRD-PARTY-NOTICES.txt followed by the
 #      third-party notices of the .NET runtime pack the publish used;
 #   3. the unsigned per-user NSIS installer, from installer/move-reminder.nsi, with
-#      one install line and one uninstall line per published file.
+#      one install line and one uninstall line per published file, and the app's
+#      icon (src/MoveReminder.App/Resources/move-reminder.ico) as its own.
 # Everything goes under artifacts/<version>/, which git ignores. A build that changes
 # the tree is refused. It prints one line per thing it built, relative to the root:
 #
@@ -122,6 +123,7 @@ MSYS_NO_PATHCONV=1 "$makensis" -V2 -NOCD \
   "-DFILES_DIR=$(cygpath -w "$(cd "$work" && pwd)")" \
   "-DLICENSE_FILE=$(cygpath -w "$top/LICENSE")" \
   "-DNOTICES_FILE=$(cygpath -w "$(cd "$work" && pwd)/THIRD-PARTY-NOTICES.txt")" \
+  "-DICON_FILE=$(cygpath -w "$top/src/MoveReminder.App/Resources/move-reminder.ico")" \
   "$(cygpath -w "$top/installer/move-reminder.nsi")" \
   || die "makensis failed."
 [ -s "$installer" ] || die "makensis wrote no installer."
