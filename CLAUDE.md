@@ -10,13 +10,18 @@ The process level, the merge protection mode, the template version and whether l
 
 ## Commands
 
-E0 fills this section in. Never list a command here that has not been run successfully.
+Never list a command here that has not been run successfully. Every script runs in Git Bash on Windows, from the project root. They need the .NET SDK that `global.json` pins (10.0.404, latest patch) and, for the build, NSIS 3.13 (`makensis` on PATH, in `C:\Program Files (x86)\NSIS`, or named by `MAKENSIS`). NuGet restores only from the repository `nuget.config` (nuget.org).
 
-- All checks, as CI runs them: `scripts/gate --full`
-- Inner loop: `scripts/gate --fast`
-- Changed packages only: `scripts/gate --changed`
-- The release build, which `/pitwall:release` runs: `scripts/build <version>`, printing an `ARTIFACT: <path>` line per thing it built
+- All checks, as CI runs them: `scripts/gate --full` (restore, `dotnet format --verify-no-changes`, a Release build with warnings as errors, the tests, then `scripts/gate-selftest`)
+- Inner loop: `scripts/gate --fast` (whitespace format check, build, tests; a few seconds once built)
+- Changed since main only: `scripts/gate --changed` (the full checks when code changed; the self-test when a guard changed: `scripts/`, `.githooks/`, a `.csproj`, `.props`, `global.json`, `nuget.config`, `.editorconfig` or a `BannedSymbols` file)
+- Proof that the guards bite: `bash scripts/gate-selftest` (breaks each architecture boundary and plants a failing test and a badly formatted file in a scratch copy, and expects each to fail)
+- The release build, which `/pitwall:release` runs: `scripts/build <version>`, which writes `artifacts/<version>/` (ignored by git) and prints `ARTIFACT: artifacts/<version>/publish` and `ARTIFACT: artifacts/<version>/move-reminder-setup-<version>.exe`
+- Install and uninstall a built installer silently and check what each leaves: `scripts/test-installer artifacts/<version>/move-reminder-setup-<version>.exe` (CI runs it; outside CI it refuses to run while move-reminder is installed)
+- The tests alone: `dotnet test --solution MoveReminder.sln -c Release` (Microsoft.Testing.Platform, set in `global.json`)
 - Once in a new clone, so that `scripts/gate --fast` runs before every commit: `git config core.hooksPath .githooks`
+
+QA scenarios for what no test can drive (the tray, a UAC prompt, an hour of memory) are in `docs/qa/`, one file per epic.
 
 ## Architecture boundaries
 
