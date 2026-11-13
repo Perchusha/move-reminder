@@ -1,6 +1,6 @@
 # move-reminder
 
-Десктопное приложение для Windows и macOS, которое раз в час напоминает встать и подвигаться, а ещё поесть, потренироваться и позаниматься теорией на права
+Десктопное приложение для Windows, которое раз в час напоминает встать и подвигаться, а ещё поесть, потренироваться и позаниматься теорией на права
 
 The full spec is `docs/SPEC.md`. Read the sections your task touches before planning. `docs/INDEX.md` lists every document and when to read it.
 
@@ -20,7 +20,14 @@ E0 fills this section in. Never list a command here that has not been run succes
 
 ## Architecture boundaries
 
-Stage 2 (`decide`) fills this section in. Every boundary names the tool that enforces it.
+From `docs/STACK.md` (Folder structure and module boundaries) and ADR-0003. Every boundary names the tool that enforces it.
+
+- `src/MoveReminder.Core` holds the schedule, the reminder model and the settings file. It targets plain `net10.0`, not `net10.0-windows`, so it cannot use WinForms or WinRT types. Enforced by the compiler through the target framework in its `.csproj`.
+- `src/MoveReminder.App` (tray, settings window, notifications, OS events, autostart) references Core. Core never references App. Enforced by MSBuild project references: a reference back from Core would make a cycle and the build fails.
+- Core reads time only through `TimeProvider`, never `DateTime.Now`, `DateTime.UtcNow` or `DateTimeOffset.Now`. Enforced by BannedApiAnalyzers (`BannedSymbols.txt`), with warnings as errors.
+- The app never goes to the network (docs/DISCOVERY.md: Personal data): `System.Net.Http` and `System.Net.Sockets` types are banned in both projects. Enforced by BannedApiAnalyzers.
+- Core never looks up `%APPDATA%` itself: it takes the settings folder as a parameter from App, and the tests pass a temporary folder, so they never touch the owner's real settings. Enforced by BannedApiAnalyzers, which bans `System.Environment.GetFolderPath` in Core.
+- Tests of Core run without Windows UI on `FakeTimeProvider`. Enforced by `tests/MoveReminder.Core.Tests` referencing Core only, never App.
 
 ## Definition of done
 
