@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# Installs and uninstalls a built installer silently and checks what each leaves
+# behind (E0-AC7, E0-AC9).
+#
+#   scripts/test-installer <path to move-reminder-setup-x.y.z.exe>
+#
+# CI runs it after scripts/build. It checks that:
+#   - the installer asks for no elevation (asInvoker in its manifest, so no UAC prompt);
+#   - it installs into %LOCALAPPDATA%\Programs\move-reminder even when /D= names
+#     another folder, with LICENSE.txt and THIRD-PARTY-NOTICES.txt, and adds the Start
+#     menu shortcut and the HKCU uninstall entry;
+#   - the installer, MoveReminder.exe and Uninstall.exe carry the app's own icon,
+#     src/MoveReminder.App/Resources/move-reminder.ico, and the shortcut takes its
+#     icon from MoveReminder.exe (QA-E0-1);
+#   - the uninstaller removes the installed files, the shortcut and the entry, and
+#     leaves a file it did not install and %APPDATA%\move-reminder in place.
+# Outside CI it refuses to run when move-reminder is already installed, so it never
+# touches a real installation, and it never writes into an %APPDATA%\move-reminder
+# that is already there: it only checks that the uninstall left it as it was.
+set -euo pipefail
+
+installer="${1:-}"
+if [ -z "$installer" ] || [ ! -f "$installer" ]; then
+  echo "usage: scripts/test-installer <path to the installer>" >&2
+  exit 2
+fi
+command -v cygpath >/dev/null 2>&1 || { echo "test-installer: FAIL - run it in Git Bash on Windows." >&2; exit 1; }
+
+local_app_data="$(cygpath -u "$LOCALAPPDATA")"
+app_data="$(cygpath -u "$APPDATA")"
+start_menu="$app_data/Microsoft/Windows/Start Menu/Programs"
+inst="$local_app_data/Programs/move-reminder"
+settings="$app_data/move-reminder"
+shortcut="$start_menu/move-reminder.lnk"
+uninstall_key='HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\move-reminder'
+decoy="$(mktemp -d)"
+
+failures=0
+check() {
+  local label="$1"
+  shift
+  if "$@"; then
+    echo "test-installer: ok - $label"
+  else
+    echo "test-installer: FAIL - $label"
+    failures=$((failures + 1))
+  fi
+}
+has_key() { MSYS_NO_PATHCONV=1 reg query "$uninstall_key" >/dev/null 2>&1; }
+no_key() { ! has_key; }
+missing() { [ ! -e "$1" ]; }
+dir_empty() { [ -z "$(ls -A "$1" 2>/dev/null)" ]; }
+
+# The app's own icon (QA-E0-1). A file shows it when the icon Windows takes from the
+# file (Icon.ExtractAssociatedIcon, at the system's large icon size) has the very
+# pixels of the frame of that size in the repository's .ico.
+app_icon="$(cd "$(dirname "$0")/.." && pwd)/src/MoveReminder.App/Resources/move-reminder.ico"
+shows_app_icon() {
+  ICON_REF="$(cygpath -w "$app_icon")" ICON_OF="$(cygpath -w "$1")" powershell.exe -NoProfile -NonInteractive -Command '
+    $ErrorActionPreference = "Stop"
+    Add-Type -AssemblyName System.Drawing
+    function Pixels($icon) {
+      $b = $icon.ToBitmap(); $s = New-Object System.Text.StringBuilder
+      for ($y = 0; $y -lt $b.Height; $y++) { for ($x = 0; $x -lt $b.Width; $x++) { [void]$s.Append($b.GetPixel($x, $y).ToArgb()).Append(",") } }
+      $s.ToString()
+    }
+    $of = [System.Drawing.Icon]::ExtractAssociatedIcon($env:ICON_OF)
+    $ref = New-Object System.Drawing.Icon($env:ICON_REF, $of.Width, $of.Height)
+    if ($ref.Width -eq $of.Width -and (Pixels $ref) -eq (Pixels $of)) { exit 0 } else { exit 1 }
+  ' >/dev/null 2>&1
+}
+not_app_icon() { ! shows_app_icon "$1"; }
+# The icon the shortcut names, as "<file>,<index>", in lower case.
+shortcut_icon() {
+  LNK="$(cygpath -w "$1")" powershell.exe -NoProfile -NonInteractive -Command \
+    '(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK).IconLocation' | tr -d '\r' | tr '[:upper:]' '[:lower:]'
+}
+shortcut_shows_exe_icon() {
+  local want
+  want="$(cygpath -w "$inst/MoveReminder.exe" | tr '[:upper:]' '[:lower:]'),0"
+  [ "$(shortcut_icon "$shortcut")" = "$want" ]
+}
+
+if [ -z "${CI:-}" ] && { [ -e "$inst" ] || has_key; }; then
+  echo "test-installer: FAIL - move-reminder is already installed here ($inst); uninstall it first, this test never touches a real installation." >&2
+  exit 1
+fi
+
+# %APPDATA%\move-reminder stands for the settings (ADR-0001) and must come out of the
+# uninstall as it went in. A folder that is already there is only listed, never
+# written; a missing one is created with a marker file, and removed at the end.
+created_settings=0
+marker="$settings/test-installer-marker.txt"
+if [ ! -e "$settings" ]; then
+  mkdir -p "$settings"
+  echo "test-installer marker" >"$marker"
+  created_settings=1
+fi
+settings_before="$(ls -A "$settings")"
+settings_unchanged() { [ -d "$settings" ] && [ "$(ls -A "$settings")" = "$settings_before" ]; }
+cleanup() {
+  if [ "$created_settings" = 1 ]; then
+    rm -f "$marker"
+    rmdir "$settings" 2>/dev/null || true
+  fi
+  rm -f "$inst/user-file.txt"
+  rmdir "$inst" 2>/dev/null || true
+  rm -rf "$decoy"
+}
+trap cleanup EXIT
+
+check "the icon check tells icons apart: cmd.exe does not show the app's icon" \
+  not_app_icon "$(cygpath -u "$SYSTEMROOT")/System32/cmd.exe"
+check "the installer carries the app's icon" shows_app_icon "$installer"
+check "the installer asks for no elevation (asInvoker)" \
+  grep -a -q 'requestedExecutionLevel level="asInvoker"' "$installer"
+
+echo "test-installer: install $installer"
+MSYS_NO_PATHCONV=1 "$installer" /S "/D=$(cygpath -w "$decoy")"
+
+check "MoveReminder.exe is in %LOCALAPPDATA%\\Programs\\move-reminder" test -f "$inst/MoveReminder.exe"
+check "LICENSE.txt is in the install folder" test -s "$inst/LICENSE.txt"
+check "LICENSE.txt is the MIT licence" grep -q '^MIT License' "$inst/LICENSE.txt"
+check "THIRD-PARTY-NOTICES.txt is in the install folder" test -s "$inst/THIRD-PARTY-NOTICES.txt"
+for name in 'WinRT.Runtime.dll' 'Microsoft.Windows.SDK.NET.dll' 'NSIS' '.NET runtime'; do
+  check "THIRD-PARTY-NOTICES.txt covers $name" grep -q -F "$name" "$inst/THIRD-PARTY-NOTICES.txt"
+done
+check "the Uninstall.exe is in the install folder" test -f "$inst/Uninstall.exe"
+check "the Start menu shortcut is there" test -f "$shortcut"
+check "MoveReminder.exe carries the app's icon" shows_app_icon "$inst/MoveReminder.exe"
+check "Uninstall.exe carries the app's icon" shows_app_icon "$inst/Uninstall.exe"
+check "the Start menu shortcut takes its icon from MoveReminder.exe" shortcut_shows_exe_icon
+check "the HKCU uninstall entry is there" has_key
+check "/D= does not move the install folder" dir_empty "$decoy"
+
+# A file the installer did not put there must survive the uninstall.
+echo "kept" >"$inst/user-file.txt"
+
+echo "test-installer: uninstall"
+MSYS_NO_PATHCONV=1 "$inst/Uninstall.exe" /S
+# The uninstaller copies itself to %TEMP% and returns at once: wait until it is done.
+for _ in $(seq 1 120); do
+  [ -e "$inst/Uninstall.exe" ] || break
+  sleep 1
+done
+sleep 2
+
+check "the uninstaller removed MoveReminder.exe" missing "$inst/MoveReminder.exe"
+check "the uninstaller removed Uninstall.exe" missing "$inst/Uninstall.exe"
+check "the uninstaller removed LICENSE.txt and THIRD-PARTY-NOTICES.txt" \
+  bash -c '[ ! -e "$1/LICENSE.txt" ] && [ ! -e "$1/THIRD-PARTY-NOTICES.txt" ]' _ "$inst"
+check "only the file it did not install is left in the install folder" \
+  bash -c '[ "$(ls -A "$1")" = "user-file.txt" ]' _ "$inst"
+check "the uninstaller removed the Start menu shortcut" missing "$shortcut"
+check "the uninstaller removed the HKCU uninstall entry" no_key
+check "%APPDATA%\\move-reminder is left in place, as it was" settings_unchanged
+
+if [ "$failures" -gt 0 ]; then
+  echo "test-installer: FAIL - $failures check(s) failed."
+  exit 1
+fi
+echo "test-installer: PASS"

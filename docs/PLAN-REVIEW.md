@@ -69,3 +69,5 @@ Gaps in the plan: a scenario no criterion covers, a criterion QA cannot check, a
 ## Approval
 
 Filled in by the first commit of E0's branch, from the plan's merge commit: who approved the plan, when, and the merge commit.
+
+Plan approved by the owner, 2026-11-13, at d3f6e4052e82ac21cb064af05183c7dc4a9ec5c8

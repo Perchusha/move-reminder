@@ -1,0 +1,2 @@
+N:System.Net.Http;The app never goes to the network (docs/DISCOVERY.md, Personal data; CLAUDE.md, Architecture boundaries)
+N:System.Net.Sockets;The app never goes to the network (docs/DISCOVERY.md, Personal data; CLAUDE.md, Architecture boundaries)

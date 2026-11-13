@@ -10,6 +10,7 @@ One line per document: what it holds and when to read it. Every entity has an ID
 | `STACK.md` | The stack with versions, and where models, prices and limits live | Adding a dependency or calling an API |
 | `adr/` | One decision per file: context, options, decision, consequences | Touching an area a decision covers |
 | `spikes/` | Prototypes of risky assumptions with measured results, one file each from `template.md` | Revisiting a risky choice |
+| `qa/` | Manual QA scenarios, one file per epic, for what no automated test can drive (the tray, a UAC prompt, an hour of memory) | Testing an epic by hand, releasing |
 | `EPICS.md` | The plan: epics in order with status | Picking the next work |
 | `epics/` | One epic per file with acceptance criteria and risk class | Implementing, reviewing or testing an epic |
 | `reviews/` | One code review per epic or bug fix: what covers each criterion, the findings and what closed them; one QA review per release | Reviewing a change, fixing a finding |

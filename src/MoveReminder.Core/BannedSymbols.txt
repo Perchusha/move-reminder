@@ -1,0 +1,7 @@
+P:System.DateTime.Now;Core reads time only through TimeProvider (CLAUDE.md, Architecture boundaries)
+P:System.DateTime.UtcNow;Core reads time only through TimeProvider (CLAUDE.md, Architecture boundaries)
+P:System.DateTime.Today;Core reads time only through TimeProvider (CLAUDE.md, Architecture boundaries)
+P:System.DateTimeOffset.Now;Core reads time only through TimeProvider (CLAUDE.md, Architecture boundaries)
+P:System.DateTimeOffset.UtcNow;Core reads time only through TimeProvider (CLAUDE.md, Architecture boundaries)
+M:System.Environment.GetFolderPath(System.Environment.SpecialFolder);Core takes the settings folder as a parameter from App (CLAUDE.md, Architecture boundaries)
+M:System.Environment.GetFolderPath(System.Environment.SpecialFolder,System.Environment.SpecialFolderOption);Core takes the settings folder as a parameter from App (CLAUDE.md, Architecture boundaries)

@@ -11,6 +11,8 @@ Written at stage 2 (`decide`). Every area in pitwall's `decide.areas` appears in
 | Framework | Windows Forms из состава .NET 10 | 10.0.15 | https://endoflife.date/api/dotnet.json прочитано 2026-11-13 (релиз 2026-11-10) | ADR-0003 |
 | Data model | Список напоминаний двух видов в одном JSON-файле со schemaVersion в %APPDATA%\move-reminder | - | - | ADR-0001 |
 | Hosting and staging | GitHub Releases, установщик NSIS на пользователя, сборка в GitHub Actions; staging: локальная сборка | 3.13 | https://nsis.sourceforge.io/Download прочитано 2026-11-13 (релиз 2026-09-27) | ADR-0002 |
+| Platform and runtime | .NET SDK, закреплён в global.json (rollForward latestPatch) | 10.0.404 | https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json прочитано 2026-11-13 (latest-sdk) | ADR-0003 |
+| CI/CD | actions/checkout, actions/setup-dotnet, actions/upload-artifact | v7.0.1, v6.1.0, v7.0.2 | https://api.github.com/repos/actions/checkout/releases/latest (и то же для setup-dotnet, upload-artifact) прочитано 2026-11-13 (релизы 2026-07-20, 2026-11-03, 2026-10-07) | ADR-0002 |
 | Test strategy | xunit.v3 | 4.0.3 | https://api.nuget.org/v3/registration5-gz-semver2/xunit.v3/index.json прочитано 2026-11-13 (релиз 2026-11-09, Apache-2.0) | - |
 | Test strategy | xunit.runner.visualstudio | 4.0.1 | https://api.nuget.org/v3/registration5-gz-semver2/xunit.runner.visualstudio/index.json прочитано 2026-11-13 (релиз 2026-10-09, Apache-2.0) | - |
 | Test strategy | Microsoft.NET.Test.Sdk | 18.12.0 | https://api.nuget.org/v3/registration5-gz-semver2/microsoft.net.test.sdk/index.json прочитано 2026-11-13 (релиз 2026-11-11, MIT) | - |

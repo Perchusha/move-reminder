@@ -1,0 +1,1 @@
+T:System.Drawing.SystemIcons;The app shows its own icon, Resources/move-reminder.ico through AppIcon; a system icon reads as no icon in the tray (QA-E0-1)

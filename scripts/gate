@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 # The gate contract of a pitwall project.
 #
-#   scripts/gate --fast      lint, typecheck, unit tests: the inner loop
-#   scripts/gate --changed   checks for packages changed since main
-#   scripts/gate --full      everything CI runs
+#   scripts/gate --fast      format (whitespace), build, unit tests: the inner loop,
+#                            which .githooks/pre-commit runs before every commit
+#   scripts/gate --changed   the full checks when code changed since main, and the
+#                            self-test when a guard changed (see guard_changed below)
+#   scripts/gate --full      everything CI runs: restore, dotnet format, build, tests,
+#                            and scripts/gate-selftest
 #
-# Exit 0 is a pass, anything else is a fail. pitwall never assumes a stack:
-# its skills and hooks only call this script.
-#
-# This is the stub from the template. It passes while the repository holds
-# only docs and configuration, and fails as soon as anything else appears,
-# tracked or not, so a project can never look green with no real checks.
-# Epic E0 replaces the body below with the real checks for the chosen stack
-# (E0-AC1). It fails closed: outside a git repository it fails.
+# Exit 0 is a pass, anything else is a fail. pitwall never assumes a stack: its
+# skills and hooks only call this script. The build treats every warning as an
+# error (Directory.Build.props), which is also how the architecture boundaries in
+# CLAUDE.md fail the build.
 set -euo pipefail
 
 mode="${1:---full}"
@@ -27,36 +26,91 @@ if ! top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
 fi
 cd "$top"
 
-# Docs and configuration the template ships. Everything else counts as code.
+if ! command -v dotnet >/dev/null 2>&1; then
+  echo "gate: FAIL - dotnet is not on PATH; install the .NET SDK that global.json names."
+  exit 1
+fi
+
+export DOTNET_NOLOGO=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+solution="MoveReminder.sln"
+
+# Runs one check and stops the gate at the first one that fails.
+step() {
+  local name="$1"
+  shift
+  echo "gate: $name"
+  if ! "$@"; then
+    echo "gate: FAIL ($mode) - $name"
+    exit 1
+  fi
+}
+
+fast_checks() {
+  step "format (whitespace)" dotnet format whitespace "$solution" --verify-no-changes
+  step "build (warnings as errors)" dotnet build "$solution" -c Release --nologo -v q
+  step "tests" dotnet test --solution "$solution" -c Release --no-build
+}
+
+full_checks() {
+  step "restore" dotnet restore "$solution" --nologo -v q
+  step "format (whitespace, style, analyzers)" dotnet format "$solution" --verify-no-changes --no-restore
+  step "build (warnings as errors)" dotnet build "$solution" -c Release --no-restore --nologo -v q
+  step "tests" dotnet test --solution "$solution" -c Release --no-build
+}
+
+# Files that are not code: a change to them alone needs no checks.
 is_docs() {
   case "$1" in
-    docs/*.md|docs/*.png|docs/*.jpg|docs/*.jpeg|docs/*.svg|docs/*.txt) return 0 ;;
-    .github/workflows/*.yml|.github/workflows/*.yaml|.github/*.md) return 0 ;;
-    .claude/*.json|.claude/*.md) return 0 ;;
-    CLAUDE.md|AGENTS.md|README.md|CHANGELOG.md|LICENSE|.gitignore|.gitattributes|.editorconfig) return 0 ;;
-    scripts/gate|scripts/build|.githooks/*|.vscode/extensions.json) return 0 ;;
+    docs/*|*.md|LICENSE|.claude/*.json) return 0 ;;
   esac
   return 1
 }
 
-listing="$(mktemp)"
-trap 'rm -f "$listing"' EXIT
-if ! git -c core.quotePath=false ls-files -z --cached --others --exclude-standard > "$listing"; then
-  echo "gate: FAIL - git could not list the files."
-  exit 1
-fi
+# Files that hold a guard the self-test proves: the gate, the build settings, the banned APIs.
+is_guard() {
+  case "$1" in
+    scripts/gate|scripts/gate-selftest|.githooks/*) return 0 ;;
+    global.json|nuget.config|.editorconfig|*.props|*.targets|*.csproj|*.sln) return 0 ;;
+    */BannedSymbols*.txt) return 0 ;;
+  esac
+  return 1
+}
 
-code_files=()
-while IFS= read -r -d '' f; do
-  [ -e "$f" ] || [ -L "$f" ] || continue
-  is_docs "$f" || code_files+=("$f")
-done < "$listing"
+case "$mode" in
+  --fast)
+    fast_checks
+    ;;
+  --full)
+    full_checks
+    step "self-test (the gate and the build guards fail when they should)" bash scripts/gate-selftest
+    ;;
+  --changed)
+    base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || true)"
+    if [ -z "$base" ]; then
+      echo "gate: no main to compare with, so every check runs."
+      full_checks
+      step "self-test (the gate and the build guards fail when they should)" bash scripts/gate-selftest
+    else
+      code=0
+      guard=0
+      while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        is_docs "$f" || code=1
+        if is_guard "$f"; then guard=1; fi
+      done < <(git -c core.quotePath=false diff --name-only "$base"; git -c core.quotePath=false ls-files --others --exclude-standard)
+      if [ "$code" = 0 ]; then
+        echo "gate: PASS ($mode) - only docs changed since main."
+        exit 0
+      fi
+      full_checks
+      if [ "$guard" = 1 ]; then
+        step "self-test (the gate and the build guards fail when they should)" bash scripts/gate-selftest
+      fi
+    fi
+    ;;
+esac
 
-if [ "${#code_files[@]}" -gt 0 ]; then
-  echo "gate: FAIL - the repository has code, but scripts/gate is still the template stub."
-  echo "E0 replaces this stub with the real checks for the chosen stack. Files found:"
-  printf '  %s\n' "${code_files[@]:0:20}"
-  exit 1
-fi
-
-echo "gate: PASS ($mode) - docs only, no checks configured yet. E0 replaces this stub."
+echo "gate: PASS ($mode)"
