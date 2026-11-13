@@ -1,0 +1,18 @@
+﻿Log: prototype/toast-buttons/results/spike.log
+Delivery (history count after 10 shown): 10 of 10
+Banner clicks:
+  b1 expected=snooze got=snooze ok
+  b2 expected=snooze got=snooze ok
+  b3 expected=snooze got=snooze ok
+  b4 expected=dismiss got=snooze MISS
+  b5 expected=dismiss got=snooze MISS
+  => 3 of 5
+Notification center clicks:
+  a1 expected=snooze got=- MISS
+  a2 expected=snooze got=- MISS
+  a3 expected=snooze got=- MISS
+  a4 expected=dismiss got=body MISS
+  a5 expected=dismiss got=- MISS
+  => 0 of 5
+Do not disturb (history count after 1 shown): 1 of 1
+Failed toasts logged: 10

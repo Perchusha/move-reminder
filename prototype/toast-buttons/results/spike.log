@@ -1,0 +1,91 @@
+2026-11-13T17:19:52.6586521+01:00 started aumid=MoveReminder.ToastSpike os=10.0.26300.0 pid=40900
+2026-11-13T17:19:52.6938386+01:00 notifier setting=DisabledForUser
+2026-11-13T17:20:02.8313369+01:00 started aumid=MoveReminder.ToastSpike os=10.0.26300.0 pid=38676
+2026-11-13T17:20:02.8552747+01:00 notifier setting=DisabledForUser
+2026-11-13T17:20:14.5338120+01:00 exit
+2026-11-13T17:20:33.1124859+01:00 shown id=d1 group=delivery
+2026-11-13T17:20:33.1154503+01:00 shown id=d2 group=delivery
+2026-11-13T17:20:33.1167974+01:00 failed id=d2 error=0x803E0114
+2026-11-13T17:20:33.1170717+01:00 failed id=d1 error=0x803E0114
+2026-11-13T17:20:33.1179909+01:00 shown id=d3 group=delivery
+2026-11-13T17:20:33.1182996+01:00 failed id=d3 error=0x803E0114
+2026-11-13T17:20:33.1204071+01:00 shown id=d4 group=delivery
+2026-11-13T17:20:33.1206609+01:00 failed id=d4 error=0x803E0114
+2026-11-13T17:20:33.1228500+01:00 shown id=d5 group=delivery
+2026-11-13T17:20:33.1231524+01:00 failed id=d5 error=0x803E0114
+2026-11-13T17:20:33.1256621+01:00 shown id=d6 group=delivery
+2026-11-13T17:20:33.1258900+01:00 failed id=d6 error=0x803E0114
+2026-11-13T17:20:33.1279956+01:00 shown id=d7 group=delivery
+2026-11-13T17:20:33.1282013+01:00 failed id=d7 error=0x803E0114
+2026-11-13T17:20:33.1301628+01:00 shown id=d8 group=delivery
+2026-11-13T17:20:33.1304305+01:00 failed id=d8 error=0x803E0114
+2026-11-13T17:20:33.1326102+01:00 shown id=d9 group=delivery
+2026-11-13T17:20:33.1328395+01:00 failed id=d9 error=0x803E0114
+2026-11-13T17:20:33.1349263+01:00 shown id=d10 group=delivery
+2026-11-13T17:20:33.1351771+01:00 failed id=d10 error=0x803E0114
+2026-11-13T17:20:34.1515392+01:00 delivery-history count=0
+2026-11-13T17:20:44.7933376+01:00 shown id=d1 group=delivery
+2026-11-13T17:20:44.7964744+01:00 shown id=d2 group=delivery
+2026-11-13T17:20:44.7986514+01:00 shown id=d3 group=delivery
+2026-11-13T17:20:44.8007446+01:00 shown id=d4 group=delivery
+2026-11-13T17:20:44.8030798+01:00 shown id=d5 group=delivery
+2026-11-13T17:20:44.8050398+01:00 shown id=d6 group=delivery
+2026-11-13T17:20:44.8078333+01:00 shown id=d7 group=delivery
+2026-11-13T17:20:44.8106385+01:00 shown id=d8 group=delivery
+2026-11-13T17:20:44.8128361+01:00 shown id=d9 group=delivery
+2026-11-13T17:20:44.8149819+01:00 shown id=d10 group=delivery
+2026-11-13T17:20:45.8318202+01:00 delivery-history count=10
+2026-11-13T17:20:53.6127735+01:00 shown id=b1 group=banner
+2026-11-13T17:20:57.5528573+01:00 activated id=b1;action=snooze
+2026-11-13T17:20:59.5714180+01:00 shown id=b2 group=banner
+2026-11-13T17:21:00.5967523+01:00 activated id=b2;action=snooze
+2026-11-13T17:21:02.6037646+01:00 shown id=b3 group=banner
+2026-11-13T17:21:03.4123937+01:00 activated id=b3;action=snooze
+2026-11-13T17:21:05.4199598+01:00 shown id=b4 group=banner
+2026-11-13T17:21:06.1472563+01:00 activated id=b4;action=snooze
+2026-11-13T17:21:08.1616160+01:00 shown id=b5 group=banner
+2026-11-13T17:21:09.2319400+01:00 activated id=b5;action=snooze
+2026-11-13T17:21:11.2358594+01:00 banners done
+2026-11-13T17:21:37.5101179+01:00 shown id=a1 group=center
+2026-11-13T17:21:37.5122389+01:00 shown id=a2 group=center
+2026-11-13T17:21:37.5141459+01:00 shown id=a3 group=center
+2026-11-13T17:21:37.5162418+01:00 shown id=a4 group=center
+2026-11-13T17:21:37.5183206+01:00 shown id=a5 group=center
+2026-11-13T17:21:43.8795680+01:00 dismissed id=a1 reason=TimedOut
+2026-11-13T17:21:50.6894861+01:00 dismissed id=a4 reason=TimedOut
+2026-11-13T17:21:50.6897780+01:00 dismissed id=a5 reason=TimedOut
+2026-11-13T17:21:50.6899959+01:00 dismissed id=a2 reason=TimedOut
+2026-11-13T17:21:50.6902026+01:00 dismissed id=a3 reason=TimedOut
+2026-11-13T17:21:56.4259491+01:00 activated id=a4;action=body
+2026-11-13T17:22:04.2404121+01:00 dismissed id=a1 reason=UserCanceled
+2026-11-13T17:22:04.8944609+01:00 dismissed id=a2 reason=UserCanceled
+2026-11-13T17:22:05.5109650+01:00 dismissed id=a3 reason=UserCanceled
+2026-11-13T17:22:05.9786747+01:00 dismissed id=a5 reason=UserCanceled
+2026-11-13T17:23:02.8259729+01:00 shown id=d1 group=delivery
+2026-11-13T17:23:02.8281493+01:00 shown id=d2 group=delivery
+2026-11-13T17:23:02.8305898+01:00 shown id=d3 group=delivery
+2026-11-13T17:23:02.8324354+01:00 shown id=d4 group=delivery
+2026-11-13T17:23:02.8342602+01:00 shown id=d5 group=delivery
+2026-11-13T17:23:02.8359820+01:00 shown id=d6 group=delivery
+2026-11-13T17:23:02.8378495+01:00 shown id=d7 group=delivery
+2026-11-13T17:23:02.8403760+01:00 shown id=d8 group=delivery
+2026-11-13T17:23:02.8422026+01:00 shown id=d9 group=delivery
+2026-11-13T17:23:02.8440754+01:00 shown id=d10 group=delivery
+2026-11-13T17:23:03.8603974+01:00 delivery-history count=10
+2026-11-13T17:23:12.4050296+01:00 exit
+2026-11-13T17:23:14.6430170+01:00 started aumid=MoveReminder.ToastSpike os=10.0.26300.0 pid=24480
+2026-11-13T17:23:14.6695264+01:00 notifier setting=Enabled
+2026-11-13T17:23:16.5963623+01:00 shown id=d1 group=delivery
+2026-11-13T17:23:16.5984048+01:00 shown id=d2 group=delivery
+2026-11-13T17:23:16.6002997+01:00 shown id=d3 group=delivery
+2026-11-13T17:23:16.6021556+01:00 shown id=d4 group=delivery
+2026-11-13T17:23:16.6039972+01:00 shown id=d5 group=delivery
+2026-11-13T17:23:16.6061328+01:00 shown id=d6 group=delivery
+2026-11-13T17:23:16.6082230+01:00 shown id=d7 group=delivery
+2026-11-13T17:23:16.6099908+01:00 shown id=d8 group=delivery
+2026-11-13T17:23:16.6118222+01:00 shown id=d9 group=delivery
+2026-11-13T17:23:16.6142519+01:00 shown id=d10 group=delivery
+2026-11-13T17:23:17.6305307+01:00 delivery-history count=10
+2026-11-13T17:24:54.4490259+01:00 shown id=n1 group=dnd
+2026-11-13T17:24:54.5385793+01:00 dismissed id=n1 reason=TimedOut
+2026-11-13T17:24:55.4674779+01:00 dnd-history count=1
