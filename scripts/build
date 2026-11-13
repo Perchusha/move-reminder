@@ -3,19 +3,20 @@
 #
 #   scripts/build <version>
 #
-# Builds what the owner runs or installs, from the tree as it is: an installer,
-# a package, a binary, a folder of static files. It may stamp <version> (x.y.z)
-# into what it builds, and never into a tracked file: a build that changes the
-# tree is refused. It prints one line per thing it built, so the release can
-# check it and hand it to the owner:
+# Builds what the owner installs, from the tree as it is (E0-AC4, ADR-0002):
+#   1. a self-contained publish of MoveReminder.App for win-x64, stamped <version>;
+#   2. THIRD-PARTY-NOTICES.txt: installer/THIRD-PARTY-NOTICES.txt followed by the
+#      third-party notices of the .NET runtime pack the publish used;
+#   3. the unsigned per-user NSIS installer, from installer/move-reminder.nsi, with
+#      one install line and one uninstall line per published file.
+# Everything goes under artifacts/<version>/, which git ignores. A build that changes
+# the tree is refused. It prints one line per thing it built, relative to the root:
 #
-#   ARTIFACT: <path, relative to the project root>
+#   ARTIFACT: <path>
 #
-# Exit 0 is a build, anything else a failure. pitwall never assumes a stack:
-# its release only calls this script, through its release.mjs --build.
-#
-# This is the stub from the template. It fails until epic E0 replaces the body
-# below with the real build for the chosen stack (E0-AC4).
+# Needs the .NET SDK that global.json names and NSIS 3.13: makensis on PATH, in
+# "C:\Program Files (x86)\NSIS", or named by the MAKENSIS variable.
+# Exit 0 is a build, anything else a failure.
 set -euo pipefail
 
 version="${1:-}"
@@ -24,5 +25,113 @@ if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 2
 fi
 
-echo "build: FAIL - this is the template's stub: E0 writes the build of the chosen stack here (E0-AC4)." >&2
-exit 1
+if ! top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  echo "build: FAIL - not inside a git repository." >&2
+  exit 1
+fi
+cd "$top"
+
+die() {
+  echo "build: FAIL - $1" >&2
+  exit 1
+}
+
+command -v dotnet >/dev/null 2>&1 || die "dotnet is not on PATH; install the .NET SDK that global.json names."
+command -v cygpath >/dev/null 2>&1 || die "cygpath is missing: run this script in Git Bash on Windows."
+
+makensis="${MAKENSIS:-}"
+if [ -z "$makensis" ]; then
+  if command -v makensis >/dev/null 2>&1; then
+    makensis="$(command -v makensis)"
+  elif [ -x "/c/Program Files (x86)/NSIS/makensis.exe" ]; then
+    makensis="/c/Program Files (x86)/NSIS/makensis.exe"
+  else
+    die "makensis is not found; install NSIS 3.13 or set MAKENSIS to its path."
+  fi
+fi
+
+export DOTNET_NOLOGO=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+tree_before="$(git status --porcelain=v1 --untracked-files=all)"
+
+out="artifacts/$version"
+publish="$out/publish"
+work="$out/installer"
+installer="$out/move-reminder-setup-$version.exe"
+rm -rf "$out"
+mkdir -p "$publish" "$work"
+
+# 1. The self-contained publish. No symbols and no XML docs go to the owner.
+echo "build: publish $version for win-x64"
+dotnet publish src/MoveReminder.App/MoveReminder.App.csproj \
+  -c Release -r win-x64 --self-contained true \
+  -p:Version="$version" -p:DebugType=none -p:DebugSymbols=false \
+  -o "$publish" --nologo -v q \
+  || die "dotnet publish failed."
+[ -f "$publish/MoveReminder.exe" ] || die "the publish has no MoveReminder.exe."
+
+# 2. The notices: ours, then the runtime pack's own.
+runtime="$(grep -o -E '"runtimepack\.Microsoft\.NETCore\.App\.Runtime\.win-x64/[0-9][^"]*"' "$publish/MoveReminder.deps.json" | head -n 1 | tr -d '"')"
+[ -n "$runtime" ] || die "the publish does not name its .NET runtime pack in MoveReminder.deps.json."
+runtime_version="${runtime##*/}"
+packages="$(dotnet nuget locals global-packages --list | sed -e 's/^global-packages: *//' -e 's/\r$//')"
+runtime_notices="$(cygpath -u "$packages")/microsoft.netcore.app.runtime.win-x64/$runtime_version/THIRD-PARTY-NOTICES.TXT"
+[ -f "$runtime_notices" ] || die "the .NET runtime notices are not at $runtime_notices."
+notices="$work/THIRD-PARTY-NOTICES.txt"
+{
+  sed -e 's/\r$//' installer/THIRD-PARTY-NOTICES.txt
+  printf '\n.NET runtime %s third-party notices\n' "$runtime_version"
+  printf '%s\n\n' "------------------------------------------"
+  sed -e 's/\r$//' "$runtime_notices"
+} >"$notices"
+
+# 3. The installer. Each published file gets its own install and uninstall line,
+# so the uninstaller deletes exactly what the installer put there.
+win_publish="$(cygpath -w "$(cd "$publish" && pwd)")"
+install_nsh="$work/install-files.nsh"
+uninstall_nsh="$work/uninstall-files.nsh"
+: >"$install_nsh"
+: >"$uninstall_nsh"
+current_dir=""
+while IFS= read -r -d '' file; do
+  rel="${file#./}"
+  dir="$(dirname "$rel")"
+  win_rel="${rel//\//\\}"
+  if [ "$dir" != "$current_dir" ]; then
+    if [ "$dir" = "." ]; then
+      echo "  SetOutPath \"\$INSTDIR\"" >>"$install_nsh"
+    else
+      echo "  SetOutPath \"\$INSTDIR\\${dir//\//\\}\"" >>"$install_nsh"
+    fi
+    current_dir="$dir"
+  fi
+  echo "  File \"$win_publish\\$win_rel\"" >>"$install_nsh"
+  echo "  Delete \"\$INSTDIR\\$win_rel\"" >>"$uninstall_nsh"
+done < <(cd "$publish" && find . -type f -print0 | sort -z)
+while IFS= read -r -d '' d; do
+  rel="${d#./}"
+  echo "  RMDir \"\$INSTDIR\\${rel//\//\\}\"" >>"$uninstall_nsh"
+done < <(cd "$publish" && find . -mindepth 1 -type d -print0 | sort -z -r)
+
+echo "build: installer $installer"
+MSYS_NO_PATHCONV=1 "$makensis" -V2 -NOCD \
+  "-DVERSION=$version" \
+  "-DOUT_FILE=$(cygpath -w "$top")\\${installer//\//\\}" \
+  "-DFILES_DIR=$(cygpath -w "$(cd "$work" && pwd)")" \
+  "-DLICENSE_FILE=$(cygpath -w "$top/LICENSE")" \
+  "-DNOTICES_FILE=$(cygpath -w "$(cd "$work" && pwd)/THIRD-PARTY-NOTICES.txt")" \
+  "$(cygpath -w "$top/installer/move-reminder.nsi")" \
+  || die "makensis failed."
+[ -s "$installer" ] || die "makensis wrote no installer."
+
+tree_after="$(git status --porcelain=v1 --untracked-files=all)"
+if [ "$tree_before" != "$tree_after" ]; then
+  echo "build: the tree before and after the build:" >&2
+  diff <(echo "$tree_before") <(echo "$tree_after") >&2 || true
+  die "the build changed the tree; it must leave every tracked file as it was."
+fi
+
+echo "ARTIFACT: $publish"
+echo "ARTIFACT: $installer"

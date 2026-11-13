@@ -12,6 +12,8 @@
     <!-- The build runs IDE0005 (unnecessary usings) only with a documentation file; missing doc comments are not an error. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <SatelliteResourceLanguages>ru</SatelliteResourceLanguages>
     <Company>move-reminder</Company>
     <Product>move-reminder</Product>
