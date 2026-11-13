@@ -19,6 +19,7 @@ Never list a command here that has not been run successfully. Every script runs 
 - The release build, which `/pitwall:release` runs: `scripts/build <version>`, which writes `artifacts/<version>/` (ignored by git) and prints `ARTIFACT: artifacts/<version>/publish` and `ARTIFACT: artifacts/<version>/move-reminder-setup-<version>.exe`
 - Install and uninstall a built installer silently and check what each leaves: `scripts/test-installer artifacts/<version>/move-reminder-setup-<version>.exe` (CI runs it; outside CI it refuses to run while move-reminder is installed)
 - The tests alone: `dotnet test --solution MoveReminder.sln -c Release` (Microsoft.Testing.Platform, set in `global.json`)
+- Redraw the app's icon, only to change it, then commit the .ico: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1` (writes `src/MoveReminder.App/Resources/move-reminder.ico`, the project's own artwork; the tray, `MoveReminder.exe`, the shortcut and the installer all use it, and `src/MoveReminder.App/BannedSymbols.txt` bans `SystemIcons` in App)
 - Once in a new clone, so that `scripts/gate --fast` runs before every commit: `git config core.hooksPath .githooks`
 
 QA scenarios for what no test can drive (the tray, a UAC prompt, an hour of memory) are in `docs/qa/`, one file per epic.

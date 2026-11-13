@@ -1,18 +1,19 @@
 # QA scenarios: E0 walking skeleton
 
-The checks of [E0](../epics/E0-skeleton.md) that no automated test can drive: a tray icon, a UAC prompt a person would see, an hour of memory use. Everything else is automated: `scripts/gate --full` (E0-AC1, E0-AC6), CI (E0-AC2), `scripts/build` (E0-AC4) and `scripts/test-installer` (E0-AC7, E0-AC9).
+The checks of [E0](../epics/E0-skeleton.md) that no automated test can drive: a tray icon, a UAC prompt a person would see, an hour of memory use. Everything else is automated: `scripts/gate --full` (E0-AC1, E0-AC6), CI (E0-AC2), `scripts/build` (E0-AC4) and `scripts/test-installer` (E0-AC7, E0-AC9; and that the installer, `MoveReminder.exe`, `Uninstall.exe` and the shortcut carry the app's icon). What no script can see is whether the icon is visible in the tray: that is QA-E0-1, step 4.
 
-Before you start: build the installer with `scripts/build 0.0.1` in Git Bash. It prints `ARTIFACT: artifacts/0.0.1/move-reminder-setup-0.0.1.exe`. The same installer comes out of CI as the workflow artifact `move-reminder-setup`.
+Before you start: build the installer with `scripts/build 0.0.1` in Git Bash. It prints `ARTIFACT: artifacts/0.0.1/move-reminder-setup-0.0.1.exe`. The same installer comes out of CI as the workflow artifact `move-reminder-setup`. An installer built before the app had its own icon shows none: if one is installed, uninstall it first (QA-E0-2) and build again from the branch as it is now.
 
-## QA-E0-1: install without UAC, and the tray icon (E0-AC4, E0-AC7)
+## QA-E0-1: install without UAC, and the app's icon in the tray (E0-AC4, E0-AC7)
 
-1. Double-click `move-reminder-setup-0.0.1.exe`. If SmartScreen warns about an unknown publisher, choose «Подробнее», then «Выполнить в любом случае» (ADR-0002).
-2. Expected: no UAC prompt (the screen does not dim and Windows does not ask for administrator rights), and no page that asks for a folder. The installer shows its progress page in Russian and finishes with «Готово».
-3. Close the installer. Expected: the app has started by itself, and its icon is in the tray (it can be under the ^ arrow of the hidden icons). Its tooltip reads `move-reminder`.
-4. Right-click the icon. Expected: a menu with one item, «Выход».
-5. Click «Выход». Expected: the icon disappears, and Task Manager has no `MoveReminder.exe` left.
-6. Open the Start menu and type `move-reminder`. Expected: the shortcut is there, and it starts the app with its tray icon again.
-7. Open `%LOCALAPPDATA%\Programs\move-reminder` in Explorer. Expected: `MoveReminder.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `Uninstall.exe` are there (E0-AC9).
+1. In Explorer, look at `move-reminder-setup-0.0.1.exe` before you run it. Expected: its icon is the app's own, a white arrow pointing up on a green rounded square, not the NSIS default.
+2. Double-click `move-reminder-setup-0.0.1.exe`. If SmartScreen warns about an unknown publisher, choose «Подробнее», then «Выполнить в любом случае» (ADR-0002).
+3. Expected: no UAC prompt (the screen does not dim and Windows does not ask for administrator rights), and no page that asks for a folder. The installer shows its progress page in Russian and finishes with «Готово».
+4. Close the installer. Expected: the app has started by itself, and its icon is in the tray (it can be under the ^ arrow of the hidden icons): the white arrow on the green square, clearly visible and sharp, never an empty place or a blank window frame. If you can, look at it on both the light and the dark taskbar (Settings, Personalization, Colors) and at the display scaling you use. Its tooltip reads `move-reminder`.
+5. Right-click the icon. Expected: a menu with one item, «Выход».
+6. Click «Выход». Expected: the icon disappears, and Task Manager has no `MoveReminder.exe` left.
+7. Open the Start menu and type `move-reminder`. Expected: the shortcut is there with the same icon, and it starts the app with its tray icon again.
+8. Open `%LOCALAPPDATA%\Programs\move-reminder` in Explorer. Expected: `MoveReminder.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `Uninstall.exe` are there (E0-AC9), and `MoveReminder.exe` and `Uninstall.exe` show the same icon; so does `move-reminder` in Settings, Apps, Installed apps.
 
 ## QA-E0-2: uninstall (E0-AC7)
 
