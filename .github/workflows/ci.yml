@@ -12,10 +12,54 @@ jobs:
   # The job is named `gate`: branch protection (or the local merge hook)
   # requires a green check with exactly this name.
   gate:
-    runs-on: ubuntu-latest
+    # Windows, as the app and its installer are Windows only (ADR-0002, ADR-0003).
+    runs-on: windows-latest
+    defaults:
+      run:
+        # Git Bash, which scripts/gate, scripts/build and scripts/test-installer are written for.
+        shell: bash
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # NSIS 3.13 (docs/STACK.md). The hash is the SHA-256 of nsis-3.13-setup.exe from
+      # SourceForge, whose published SHA-1 (d861f512...) it was checked against.
+      NSIS_VERSION: "3.13"
+      NSIS_SHA256: db9a1038bbc0e53fef24f423fd609979bd578e942f1be1198db186d1c42652a3
     steps:
-      - uses: actions/checkout@v4
-      # E0 adds the toolchain setup for the chosen stack here.
+      - uses: actions/checkout@v7.0.1
+
+      - name: .NET SDK from global.json
+        uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: NSIS
+        run: |
+          setup="$(cygpath -u "$RUNNER_TEMP")/nsis-$NSIS_VERSION-setup.exe"
+          curl -fsSL --retry 3 -o "$setup" "https://downloads.sourceforge.net/project/nsis/NSIS%203/$NSIS_VERSION/nsis-$NSIS_VERSION-setup.exe"
+          echo "$NSIS_SHA256  $setup" | sha256sum -c -
+          MSYS_NO_PATHCONV=1 "$setup" /S
+          "/c/Program Files (x86)/NSIS/makensis.exe" -VERSION
+
       # Called through bash so a gate committed without the executable bit still runs.
       - name: Gate
         run: bash scripts/gate --full
+
+      - name: Build
+        id: build
+        run: |
+          log="$(cygpath -u "$RUNNER_TEMP")/build.log"
+          bash scripts/build "0.0.$GITHUB_RUN_NUMBER" | tee "$log"
+          installer="$(sed -n 's/^ARTIFACT: \(.*\.exe\)$/\1/p' "$log")"
+          test -n "$installer"
+          echo "installer=$installer" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the installer
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: move-reminder-setup
+          path: ${{ steps.build.outputs.installer }}
+          if-no-files-found: error
+
+      - name: Install and uninstall
+        run: bash scripts/test-installer "${{ steps.build.outputs.installer }}"
